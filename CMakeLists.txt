@@ -29,6 +29,7 @@ endif()
 add_executable(estimator
     src/main.cpp
     src/io.cpp
+    src/plane_fitting.cpp
 )
 target_include_directories(estimator PRIVATE include)
 target_link_libraries(estimator PRIVATE Eigen3::Eigen)

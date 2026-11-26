@@ -1,4 +1,5 @@
 #include "io.hpp"
+#include "plane_fitting.hpp"
 
 #include <exception>
 #include <iostream>
@@ -15,7 +16,10 @@ int main(int argc, char* argv[])
     {
         const PointCloud cloud = loadPointCloud(argv[1]);
         std::cout << "Loaded " << cloud.size() << " points from " << cloud.name << '\n';
-        std::cout << "Centroid: " << cloud.centroid().transpose() << '\n';
+
+        const Plane plane = fitPlaneSVD(cloud);
+        std::cout << "Plane: a=" << plane.a() << " b=" << plane.b()
+                  << " c=" << plane.c() << " d=" << plane.d << '\n';
     }
     catch (const std::exception& e)
     {
