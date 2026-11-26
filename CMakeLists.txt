@@ -37,9 +37,15 @@ add_executable(estimator
 target_include_directories(estimator PRIVATE include)
 target_link_libraries(estimator PRIVATE Eigen3::Eigen)
 
-if(MSVC)
-    target_compile_options(estimator PRIVATE /W4 /utf-8)
-    target_compile_definitions(estimator PRIVATE _CRT_SECURE_NO_WARNINGS)
-else()
-    target_compile_options(estimator PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+# helper for generating synthetic test data
+add_executable(generate_data tools/generate_data.cpp)
+target_link_libraries(generate_data PRIVATE Eigen3::Eigen)
+
+foreach(target estimator generate_data)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /utf-8)
+        target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endforeach()
