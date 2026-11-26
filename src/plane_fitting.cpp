@@ -3,8 +3,10 @@
 #include <Eigen/Geometry>
 #include <Eigen/SVD>
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <random>
 #include <stdexcept>
 
 namespace
@@ -78,4 +80,72 @@ std::vector<double> planeDeviations(const Plane& plane, const PointCloud& cloud)
     for (const auto& p : cloud.points)
         dev.push_back(plane.signedDistance(p));
     return dev;
+}
+
+namespace
+{
+
+std::size_t markInliers(const Plane& plane, const PointCloud& cloud, double threshold,
+                        std::vector<bool>& mask)
+{
+    mask.assign(cloud.size(), false);
+    std::size_t count = 0;
+    for (std::size_t i = 0; i < cloud.size(); ++i)
+    {
+        if (std::abs(plane.signedDistance(cloud[i])) <= threshold)
+        {
+            mask[i] = true;
+            ++count;
+        }
+    }
+    return count;
+}
+
+} // namespace
+
+PlaneRansacResult fitPlaneRansac(const PointCloud& cloud, const RansacParams& params)
+{
+    if (cloud.size() < 3)
+        throw std::invalid_argument("plane fitting needs at least 3 points");
+    if (params.threshold <= 0.0)
+        throw std::invalid_argument("RANSAC threshold must be positive");
+
+    std::mt19937 rng(params.seed);
+    PlaneRansacResult result;
+    result.info.used = true;
+    result.info.params = params;
+
+    std::size_t bestCount = 0;
+    std::vector<bool> mask;
+    int needed = params.maxIterations;
+    int it = 0;
+    for (; it < needed; ++it)
+    {
+        const auto s = ransac::randomSample(cloud.size(), 3, rng);
+        const auto candidate = Plane::throughPoints(cloud[s[0]], cloud[s[1]], cloud[s[2]]);
+        if (!candidate)
+            continue;
+
+        const std::size_t count = markInliers(*candidate, cloud, params.threshold, mask);
+        if (count > bestCount)
+        {
+            bestCount = count;
+            result.plane = *candidate;
+            result.inliers = mask;
+            const double ratio = static_cast<double>(count) / static_cast<double>(cloud.size());
+            needed = ransac::requiredIterations(ratio, 3, params.confidence, params.maxIterations);
+        }
+    }
+    result.info.iterations = it;
+
+    if (bestCount < 3)
+        throw std::runtime_error("RANSAC could not find a plane, try a larger threshold");
+
+    // Refine on all inliers and update the inlier set for the refined plane.
+    result.plane = fitPlaneSVD(cloud, ransac::maskToIndices(result.inliers));
+    if (markInliers(result.plane, cloud, params.threshold, mask) >= 3)
+        result.inliers = mask;
+    result.info.inliers = static_cast<std::size_t>(
+        std::count(result.inliers.begin(), result.inliers.end(), true));
+    return result;
 }

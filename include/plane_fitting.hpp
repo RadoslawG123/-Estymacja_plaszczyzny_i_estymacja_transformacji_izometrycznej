@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ransac.hpp"
 #include "types.hpp"
 
 #include <cstddef>
@@ -33,3 +34,15 @@ Plane fitPlaneSVD(const PointCloud& cloud, const std::vector<std::size_t>& indic
 
 // Signed distance of every point from the plane.
 std::vector<double> planeDeviations(const Plane& plane, const PointCloud& cloud);
+
+struct PlaneRansacResult
+{
+    Plane plane;
+    std::vector<bool> inliers; // inliers[i] == true if point i fits the plane
+    RansacInfo info;
+};
+
+// Robust plane estimation for data with outliers.
+// Each iteration takes 3 random points and counts points closer than the
+// threshold. The final plane is fitted with SVD to the best inlier set.
+PlaneRansacResult fitPlaneRansac(const PointCloud& cloud, const RansacParams& params);

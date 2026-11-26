@@ -36,6 +36,23 @@ void statsBlock(std::ostream& out, const ErrorStats& stats)
         << "  max |dev|   = " << std::setw(14) << stats.maxAbs << '\n';
 }
 
+void ransacBlock(std::ostream& out, const RansacInfo& info, std::size_t totalPoints)
+{
+    const double pct = totalPoints ? 100.0 * static_cast<double>(info.inliers) /
+                                         static_cast<double>(totalPoints)
+                                   : 0.0;
+    section(out, "RANSAC");
+    out << std::fixed << std::setprecision(6)
+        << "  threshold       = " << info.params.threshold << '\n'
+        << "  confidence      = " << std::setprecision(3) << info.params.confidence << '\n'
+        << "  max iterations  = " << info.params.maxIterations << '\n'
+        << "  iterations done = " << info.iterations << '\n'
+        << "  seed            = " << info.params.seed << '\n'
+        << "  inliers         = " << info.inliers << " / " << totalPoints << " ("
+        << std::setprecision(1) << pct << " %)\n"
+        << "  outliers        = " << totalPoints - info.inliers << '\n';
+}
+
 std::string currentDateTime()
 {
     const std::time_t now = std::time(nullptr);
@@ -47,13 +64,19 @@ std::string currentDateTime()
 } // namespace report
 
 void writePlaneReport(std::ostream& out, const PointCloud& cloud, const Plane& plane,
-                      const std::vector<double>& deviations)
+                      const std::vector<double>& deviations, const std::vector<bool>& inliers,
+                      const RansacInfo& ransacInfo)
 {
+    const std::vector<bool> mask = inliers.empty() ? std::vector<bool>(cloud.size(), true) : inliers;
+
     report::header(out, "PLANE ESTIMATION REPORT");
     out << "Date:        " << report::currentDateTime() << '\n'
         << "Input file:  " << cloud.name << '\n'
         << "Points:      " << cloud.size() << '\n'
-        << "Method:      least squares fit (SVD)\n";
+        << "Method:      "
+        << (ransacInfo.used ? "RANSAC + least squares fit on inliers (SVD)"
+                            : "least squares fit (SVD)")
+        << '\n';
 
     report::section(out, "Estimated plane:  a*x + b*y + c*z + d = 0");
     out << std::fixed << std::setprecision(9)
@@ -62,17 +85,34 @@ void writePlaneReport(std::ostream& out, const PointCloud& cloud, const Plane& p
         << "  c = " << std::setw(16) << plane.c() << '\n'
         << "  d = " << std::setw(16) << plane.d << '\n';
 
-    report::section(out, "Errors (point-to-plane distance)");
-    report::statsBlock(out, computeErrorStats(deviations));
+    if (ransacInfo.used)
+    {
+        report::ransacBlock(out, ransacInfo, cloud.size());
+        report::section(out, "Errors - inliers only (point-to-plane distance)");
+        report::statsBlock(out, computeErrorStats(deviations, mask));
+        report::section(out, "Errors - all points");
+        report::statsBlock(out, computeErrorStats(deviations));
+    }
+    else
+    {
+        report::section(out, "Errors (point-to-plane distance)");
+        report::statsBlock(out, computeErrorStats(deviations));
+    }
 
     report::section(out, "Deviations of individual points");
     out << std::setw(7) << "#" << std::setw(14) << "x" << std::setw(14) << "y"
-        << std::setw(14) << "z" << std::setw(14) << "deviation" << '\n';
-    out << std::setprecision(6);
+        << std::setw(14) << "z" << std::setw(14) << "deviation";
+    if (ransacInfo.used)
+        out << "  status";
+    out << '\n' << std::setprecision(6);
+
     for (std::size_t i = 0; i < cloud.size(); ++i)
     {
         const Point3& p = cloud[i];
         out << std::setw(7) << i + 1 << std::setw(14) << p.x() << std::setw(14) << p.y()
-            << std::setw(14) << p.z() << std::setw(14) << deviations[i] << '\n';
+            << std::setw(14) << p.z() << std::setw(14) << deviations[i];
+        if (ransacInfo.used)
+            out << "  " << (mask[i] ? "inlier" : "OUTLIER");
+        out << '\n';
     }
 }

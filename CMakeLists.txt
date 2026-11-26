@@ -31,6 +31,7 @@ add_executable(estimator
     src/error_stats.cpp
     src/io.cpp
     src/plane_fitting.cpp
+    src/ransac.cpp
     src/report.cpp
 )
 target_include_directories(estimator PRIVATE include)
