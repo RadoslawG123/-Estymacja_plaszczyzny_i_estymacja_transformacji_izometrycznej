@@ -31,12 +31,14 @@ add_executable(estimator
     src/error_stats.cpp
     src/io.cpp
     src/plane_fitting.cpp
+    src/report.cpp
 )
 target_include_directories(estimator PRIVATE include)
 target_link_libraries(estimator PRIVATE Eigen3::Eigen)
 
 if(MSVC)
     target_compile_options(estimator PRIVATE /W4 /utf-8)
+    target_compile_definitions(estimator PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
     target_compile_options(estimator PRIVATE -Wall -Wextra -Wpedantic)
 endif()
