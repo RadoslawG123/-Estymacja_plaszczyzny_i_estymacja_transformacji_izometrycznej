@@ -49,3 +49,12 @@ foreach(target estimator generate_data)
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endforeach()
+
+# MinGW: link libstdc++/libgcc statically, otherwise the program may pick up
+# an incompatible libstdc++-6.dll from PATH (e.g. the one shipped with Git)
+# and crash on startup.
+if(MINGW)
+    foreach(target estimator generate_data)
+        target_link_options(${target} PRIVATE -static)
+    endforeach()
+endif()
