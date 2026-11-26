@@ -1,3 +1,4 @@
+#include "error_stats.hpp"
 #include "io.hpp"
 #include "plane_fitting.hpp"
 
@@ -20,6 +21,9 @@ int main(int argc, char* argv[])
         const Plane plane = fitPlaneSVD(cloud);
         std::cout << "Plane: a=" << plane.a() << " b=" << plane.b()
                   << " c=" << plane.c() << " d=" << plane.d << '\n';
+
+        const ErrorStats stats = computeErrorStats(planeDeviations(plane, cloud));
+        std::cout << "RMS: " << stats.rms << "  max |dev|: " << stats.maxAbs << '\n';
     }
     catch (const std::exception& e)
     {

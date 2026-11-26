@@ -28,6 +28,7 @@ endif()
 
 add_executable(estimator
     src/main.cpp
+    src/error_stats.cpp
     src/io.cpp
     src/plane_fitting.cpp
 )

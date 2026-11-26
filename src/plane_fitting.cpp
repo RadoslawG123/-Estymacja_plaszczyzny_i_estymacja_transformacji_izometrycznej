@@ -70,3 +70,12 @@ Plane fitPlaneSVD(const PointCloud& cloud)
     std::iota(all.begin(), all.end(), std::size_t{0});
     return fitPlaneSVD(cloud, all);
 }
+
+std::vector<double> planeDeviations(const Plane& plane, const PointCloud& cloud)
+{
+    std::vector<double> dev;
+    dev.reserve(cloud.size());
+    for (const auto& p : cloud.points)
+        dev.push_back(plane.signedDistance(p));
+    return dev;
+}

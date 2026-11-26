@@ -30,3 +30,6 @@ Plane fitPlaneSVD(const PointCloud& cloud);
 
 // Same, but only the points with the given indices are used.
 Plane fitPlaneSVD(const PointCloud& cloud, const std::vector<std::size_t>& indices);
+
+// Signed distance of every point from the plane.
+std::vector<double> planeDeviations(const Plane& plane, const PointCloud& cloud);
